@@ -1,11 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        // Define the environment variable for Google Cloud credentials
-        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-service-account')  // This is the Jenkins Secret ID for your GCP credentials
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -15,45 +10,29 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                script {
-                    // Initialize the Terraform working directory
-                    withCredentials([file(credentialsId: 'gcp-service-account', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                        sh 'terraform init'
-                    }
+                withCredentials([file(credentialsId: 'gcp-service-account', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    sh '''
+                      echo "Using creds at: $GOOGLE_APPLICATION_CREDENTIALS"
+                      terraform init -reconfigure
+                    '''
                 }
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                script {
-                    withCredentials([file(credentialsId: 'gcp-service-account', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                        sh 'terraform plan'
-                    }
+                withCredentials([file(credentialsId: 'gcp-service-account', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    sh 'terraform plan'
                 }
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                script {
-                    withCredentials([file(credentialsId: 'gcp-service-account', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                        sh 'terraform apply -auto-approve'
-                    }
+                withCredentials([file(credentialsId: 'gcp-service-account', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    sh 'terraform apply -auto-approve'
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            echo 'Cleaning up...'
-        }
-        success {
-            echo 'Deployment Successful'
-        }
-        failure {
-            echo 'Deployment Failed'
         }
     }
 }
